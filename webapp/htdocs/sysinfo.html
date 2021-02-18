@@ -1,0 +1,89 @@
+<ons-page id="sysinfo">
+
+    <script>
+        ons.ready(function () {
+
+            var page = ons.getScriptPage();
+            var list = page.querySelector('ons-list');
+
+            //tab is shown
+            page.onShow = function () {
+                //get data from device
+                rpc("sysinfo", {}, function (result) {
+                    page.querySelector('#app_version').textContent = result.app_version;
+                    page.querySelector('#os_version').textContent = result.os_version;
+                    page.querySelector('#uptime').textContent = result.uptime;
+                    page.querySelector('#mem_free').textContent = result.mem_free.toLocaleString() + " bytes";
+                    page.querySelector('#system_load').textContent = result.system_load;
+                    page.querySelector('#disk_free').textContent = result.disk_free + " bytes";   
+                    page.querySelector('#temp').textContent = result.temp + " C";
+                    page.querySelector('#time').textContent = result.time;
+                })
+            };
+        });
+
+    </script>
+
+    <style>
+    </style>
+
+    <ons-toolbar>
+        <div class="left">
+            <ons-back-button></ons-back-button>
+        </div>
+        <div class="center">System info</div>
+    </ons-toolbar>
+
+    <ons-progress-bar indeterminate class="global-progress"></ons-progress-bar>
+
+    <ons-list>
+        <ons-list-item>
+            <div class="center">
+                Version
+            </div>
+            <div class="right" id='app_version'> </div>
+        </ons-list-item>
+        <ons-list-item>
+            <div class="center">
+                OS
+            </div>
+            <div class="right" id='os_version'> </div>
+        </ons-list-item>
+        <ons-list-item>
+            <div class="center">
+                Uptime
+            </div>
+            <div class="right" id='uptime'> </div>
+        </ons-list-item>
+        <ons-list-item>
+            <div class="center">
+                Free memory
+            </div>
+            <div class="right" id='mem_free'> </div>
+        </ons-list-item>
+        <ons-list-item>
+            <div class="center">
+                System load
+            </div>
+            <div class="right" id='system_load'> </div>
+        </ons-list-item>
+        <ons-list-item>
+            <div class="center">
+                Free disk
+            </div>
+            <div class="right" id='disk_free'> </div>
+        </ons-list-item>
+        <ons-list-item>
+            <div class="center">
+                Temperature
+            </div>
+            <div class="right" id='temp'> </div>
+        </ons-list-item>
+        <ons-list-item>
+            <div class="center">
+                System time
+            </div>
+            <div class="right" id='time'> </div>
+        </ons-list-item>
+    </ons-list>
+</ons-page>

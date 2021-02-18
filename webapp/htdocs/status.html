@@ -1,0 +1,266 @@
+<ons-page id="stats">
+    <script>   
+        var setDateLabel = function(date) {
+            var text = "";
+            if (date) {
+                text = new Intl.DateTimeFormat('nl-NL', { dateStyle: 'full', timeStyle: 'long' }).format(new Date(Date.parse(date)));
+            }
+            document.getElementById('showDate').innerHTML = text;
+        }
+
+        var loadStats = function(time) {
+
+            if(time == undefined) {
+                time = '';
+            }
+            
+            rpc("energy.getState", { 'parameters' : { 'timestamp' : time } }, function (data) {
+                
+                document.querySelectorAll('.msg').forEach(e => {
+                    e.textContent = data.msg;
+                });
+
+                const list = document.querySelector('#meter-list');
+                list.innerHTML = "";
+
+                //Set date
+                if (data.meters.length > 0) {
+                    setDateLabel(data.meters[0].time);
+                }
+                else {
+                    setDateLabel();
+                } 
+   
+                if (data.meters) {
+
+                    const list = document.querySelector('#meter-list');
+                    data.meters.forEach(meter => {
+                        list.appendChild(ons.createElement(`
+                            <ons-list>
+                                <ons-list-header>Meter ${meter.id}</ons-list-header>
+
+                                <ons-list-item>
+                                    <div class="left">
+                                        Usage:
+                                    </div>
+                                    <div class="right">
+                                        ${meter.kwh} Kwh
+                                    </div>
+                                </ons-list-item>
+
+                                <ons-list-item>
+                                    <div class="left">
+                                        Voltage
+                                    </div>
+                                    <div class="right">
+                                        ${meter.voltage} V
+                                    </div>
+                                </ons-list-item>
+
+                                <ons-list-item>
+                                    <div class="left">
+                                        Current
+                                    </div>
+                                    <div class="right">
+                                        ${meter.current} A
+                                    </div>
+                                </ons-list-item>
+
+                                <ons-list-item>
+                                    <div class="left">
+                                        Frequency
+                                    </div>
+                                    <div class="right">
+                                        ${meter.frequency} Hz
+                                    </div>
+                                </ons-list-item>
+                            </ons-list>       
+                        `));
+                    });
+                }
+            });
+        };
+
+        /** Pull refresh */
+        var pullHook = document.getElementById('pull-hook');
+        pullHook.onAction = function(done) {
+            loadStats();
+            done();
+        };
+
+        /** Basis selectie functions */
+        var createBasicSearchDialog = function() {
+            var dialog = document.getElementById('basic-search-dialog');
+            if (dialog) {
+                dialog.show();
+            } 
+            else {
+                ons.createElement('basic-search-dialog.html', { append: true })
+                .then(function(dialog) {
+                    var select = document.getElementById('days-back-select'); 
+                    for(days = 0; days < 32; days++) {
+                        select.children[0].appendChild(ons.createElement('<option value="'+days+'">'+days+'</option>'));
+                    }
+
+                    select = document.getElementById('hour-select'); 
+                    for(hour = 0; hour < 24; hour++) {
+                        select.children[0].appendChild(ons.createElement('<option value="'+hour+'"">'+hour+':00</option>'));
+                    }
+
+                    dialog.show();
+
+                });
+            }
+
+        }
+        var applyBasicSearchFilter = function(id) {
+            document.getElementById(id).hide();
+
+            var days = document.getElementById('days-back-select').value; 
+            var hour = document.getElementById('hour-select').value; 
+            var date = new Date();
+
+            date.setDate(date.getDate() - days);
+            date.setHours(hour);
+            date.setMinutes(0);
+            date.setSeconds(0);
+            
+            loadStats(Math.round(date.getTime()/1000));
+        };
+
+        /** Datum selectie functions */
+        var createSearchDialog = function() { 
+            var dialog = document.getElementById('search-dialog');
+            if (dialog) {
+                dialog.show();
+            } 
+            else {
+                ons.createElement('search-dialog.html', { append: true })
+                .then(function(dialog) {
+
+                    //set default values
+                    var date = document.getElementById('date');
+                    var currentDate = new Date();
+                    var month = currentDate.getMonth()+1;
+                    if(month < 10) {
+                        month = '0' + month;
+                    }
+                    var day = currentDate.getDate();
+                    if(day < 10) {
+                        day = '0' + day;
+                    }
+                    date.value = currentDate.getFullYear() + '-' + month+ '-' + day;
+
+                    select = document.getElementById('time-select'); 
+                    for(hour = 0; hour < 24; hour++) {
+                        select.children[0].appendChild(ons.createElement('<option value="'+hour+':00">'+hour+':00</option>'));
+                        select.children[0].appendChild(ons.createElement('<option value="'+hour+':30">'+hour+':30</option>'));
+                    }
+
+                    dialog.show();
+                });
+            }
+        }
+        var cancelSearchFilter = function(id) {
+            document.getElementById(id).hide();
+        };
+        var applySearchFilter = function(id) {
+            document.getElementById(id).hide();
+
+            var dateSlices = document.getElementById('date').value.split('-'); 
+            var timeSlices = document.getElementById('time-select').value.split(':');; 
+            var date = new Date();
+            date.setFullYear(dateSlices[0],dateSlices[1]-1,dateSlices[2]);
+            date.setHours(timeSlices[0]);
+            date.setMinutes(timeSlices[1]);
+            date.setSeconds(0);
+
+            loadStats(Math.round(date.getTime()/1000));
+        };
+
+        /** Init */
+        loadStats();
+
+    </script>
+
+    <ons-list>
+     <ons-pull-hook id="pull-hook"></ons-pull-hook>
+
+        <ons-progress-bar indeterminate class="global-progress"></ons-progress-bar>
+
+        <ons-list-header>Meting: <label id="showDate"></label></ons-list-header>
+
+            <div style="padding:5px;">
+                <ons-button onclick="createBasicSearchDialog()">Basic selection</ons-button>
+                <ons-button onclick="createSearchDialog()">Date selection</ons-button>
+            </div>
+
+        <ons-list id="meter-list"></ons-list>
+    </ons-list>
+
+    <template id="basic-search-dialog.html">
+        <ons-dialog id="basic-search-dialog">
+            <div style="text-align: center; padding: 10px;">
+                <ons-list>
+                    <ons-list-item>
+                        <div class="left">
+                            Days back:
+                        </div>
+                        <div class="right">
+                            <ons-select id="days-back-select">
+                            </ons-select>
+                        </div>
+                    </ons-list-item>
+
+                    <ons-list-item>
+                        <div class="left">
+                            Hour:
+                        </div>
+                        <div class="right">
+                            <ons-select id="hour-select">
+                            </ons-select>
+                        </div>
+                    </ons-list-item>
+                </ons-list>
+                <p>
+                    <ons-button onclick="cancelSearchFilter('basic-search-dialog')">Cancel</ons-button>
+                    <ons-button onclick="applyBasicSearchFilter('basic-search-dialog')">Apply</ons-button>
+                </p>
+            </div>
+        </ons-dialog>
+    </template>
+
+    <template id="search-dialog.html">
+        <ons-dialog id="search-dialog">
+            <div style="text-align: center; padding: 10px;">
+                <ons-list>
+                    <ons-list-item>
+                        <div class="left">
+                            Date:
+                        </div>
+                        <div class="right">
+                            <ons-input id="date" type="date"></ons-input>
+                        </div>
+                    </ons-list-item>
+
+                    <ons-list-item>
+                        <div class="left">
+                            Time:
+                        </div>
+                        <div class="right">
+                            <ons-select id="time-select">
+                            </ons-select>
+                        </div>
+                    </ons-list-item>
+                </ons-list>
+                <p>
+                    <ons-button onclick="cancelSearchFilter('search-dialog')">Cancel</ons-button>
+                    <ons-button onclick="applySearchFilter('search-dialog')">Apply</ons-button>
+                </p>
+            </div>
+        </ons-dialog>
+    </template>
+
+</ons-page>
+
+

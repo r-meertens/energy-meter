@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<link rel="stylesheet" href="https://unpkg.com/onsenui/css/onsenui.css">
+<link rel="stylesheet" href="https://unpkg.com/onsenui/css/onsen-css-components.min.css">
+
+<script src="https://unpkg.com/onsenui/js/onsenui.min.js"></script>
+<script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+<script>
+
+    //////////////// GENERIC STUFF
+    //document_root = 'http://192.168.1.166';
+    //document_root = 'http://localhost/webapp';
+    document_root = '';
+
+    //global progress indication
+    progress_count = 0;
+    function progress_start() {
+        progress_count++;
+        document.querySelectorAll('.global-progress').forEach(e => e.style.visibility = 'visible');
+    }
+
+    function progress_done() {
+        progress_count--;
+        if (progress_count <= 0) {
+            progress_count = 0;
+            document.querySelectorAll('.global-progress').forEach(e => e.style.visibility = 'hidden');
+        }
+    }
+
+    //stores data from hash-array into a form and triggers input-events. 
+    //id should be #<key>
+    function set_form_values(context, data) {
+        Object.keys(data).forEach(key => {
+            var element = context.querySelector('#' + key);
+            if (element) {
+                element.value = data[key];
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+    }
+
+    //updates fields in data with values from form. 
+    function get_form_values(context, data) {
+
+        Object.keys(data).forEach(key => {
+            var element = context.querySelector('#' + key);
+            if (element) {
+                if (typeof (data[key]) == 'number')
+                    data[key] = parseFloat(element.value);
+                else
+                    data[key] = element.value;
+            }
+        });
+    }
+
+    ons.ready(function () {
+        ons.disableDeviceBackButtonHandler();
+        ons.setDefaultDeviceBackButtonListener(function () {
+
+            document.querySelector('ons-navigator').popPage();
+        });
+
+        progress_done();
+    });
+
+    function rpc(cmd, pars, load_handler) {
+
+        progress_start();
+        var req = new XMLHttpRequest();
+
+        var cmd_pieces = cmd.split('.');
+        var url = document_root + '/rpc/' + cmd_pieces[0] + '.php?function=' + cmd_pieces[1];
+
+        req.addEventListener("load", function (event) {
+            progress_done();
+            if (req.status == 200) {
+                console.debug("RPC", url, pars, req.response);
+                
+                if (load_handler) {
+                    var result = JSON.parse(req.response);
+                    load_handler(result);
+                }
+            }
+            else {
+                console.error("rpc result NON 200", req);
+                ons.notification.toast('Error: ' + req.responseText, { timeout: 5000 });
+            }
+
+        });
+
+        req.addEventListener("error", function (event) {
+            progress_done();
+            console.error("rpc error", req)
+            ons.notification.toast('Error during action.', { timeout: 5000 });
+        });
+
+        req.open('POST', url);
+        req.send(JSON.stringify(pars));
+        return (req);
+
+    }
+
+    const loadPage = (page, options) => {
+        document.querySelector('#menu').close();
+        document.querySelector('#navigator').bringPageTop(page, options);
+    }
+</script>
+
+<html>
+    <body>  
+        <ons-splitter>
+        <ons-splitter-side id="menu" collapse>
+                <ons-page>
+
+                    <ons-list>
+                        <ons-list-item modifier="chevron tappable" onclick="loadPage('sysinfo.html')">
+                            System info
+                        </ons-list-item>
+                    </ons-list>
+                </ons-page>
+            </ons-splitter-side>
+
+            <ons-splitter-content>
+                <ons-navigator id="navigator" page="home.html"></ons-navigator>
+            </ons-splitter-content>
+    </ons-splitter>
+
+        <ons-modal direction="up" id='reconnecting'>
+            <div style="text-align: center">
+                <p>
+                    <ons-icon icon="md-spinner" size="28px" spin></ons-icon>Connecting...
+                </p>
+            </div>
+        </ons-modal>
+    </body>
+</html>

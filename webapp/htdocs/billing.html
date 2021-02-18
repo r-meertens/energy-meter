@@ -1,0 +1,306 @@
+<ons-page id="billing">
+
+    <script>
+
+            var result = null;
+
+            var buildChart = function(id, data) {
+
+                var list = document.querySelector('#usage-chart-list');
+                list.innerHTML ="";
+                list.appendChild(ons.createElement(`
+                    <ons-list>
+                        <ons-list-header>Usage per day</ons-list-header>
+                            <ons-list-item>
+                                <canvas id="usage-chart" width="95%" height="25"></canvas>
+                            </ons-list-item>
+                    </ons-list>
+                                `));
+                
+                var days = [];
+                var usagePerDay = [];
+                data.forEach(usage => {
+                    days.push(new Intl.DateTimeFormat('nl-NL').format(new Date(Date.parse(usage.time)))); 
+                    usagePerDay.push(Math.round((usage.end_kwh - usage.begin_kwh + Number.EPSILON) * 100) / 100);
+                });
+
+                var ctx = document.getElementById('usage-chart').getContext('2d');
+                var myChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: days,
+                        datasets: [{
+                            label: 'Kwh',
+                            data: usagePerDay,
+//                            backgroundColor: [
+//                               'rgba(255, 99, 132, 0.2)'
+//                            ],
+//                            borderColor: [
+//                                'rgba(255, 99, 132, 1)'
+//                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            yAxes: [{
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }]
+                        }
+                    }
+                });
+
+
+            }
+
+            var fillTimeSelect = function(id) {
+                var select = document.querySelector('#'+id);
+                for(hour = 0; hour < 24; hour++) {
+                    select.children[0].appendChild(ons.createElement('<option value="'+hour+':00"">'+hour+':00</option>'));
+                }
+            }
+
+            var fillMeterSelect = function() {
+                rpc("energy.getSettings", {}, function (data) {
+                    var meterCount = data.settings.meter_count;
+                    var select = document.querySelector('#meter-select');
+
+                    for(meterId = 1; meterId <= meterCount; meterId++) {
+                        select.children[0].appendChild(ons.createElement('<option value='+meterId+'>'+meterId+'</option>'));
+                    }
+                });
+            } 
+
+            var getCurrentDate = function() {
+                var currentDate = new Date();
+                var month = currentDate.getMonth()+1;
+                if(month < 10) {
+                    month = '0' + month;
+                }
+                var day = currentDate.getDate();
+                if(day < 10) {
+                    day = '0' + day;
+                }
+                return currentDate.getFullYear() + '-' + month+ '-' + day;
+            }
+
+            var dateToTimestamp = function(date, time) {
+                var dateSlices = date.split('-'); 
+                var timeSlices = time.split(':');; 
+                var date = new Date();
+                date.setFullYear(dateSlices[0],dateSlices[1]-1,dateSlices[2]);
+                date.setHours(timeSlices[0]);
+                date.setMinutes(timeSlices[1]);
+                date.setSeconds(0);
+
+                return Math.round(date.getTime()/1000);
+            }
+
+
+            ons.ready(function () {
+                var page = ons.getScriptPage();
+                page.onShow = function () {
+                    progress_done();
+                };
+            });
+
+            var createBill = function () {
+                
+                var list = document.querySelector('#create-bill-list');
+
+                get_form_values(list, result);
+
+                var meterId = result['meter-select'];
+                var startTimestamp = dateToTimestamp(result['start-date'],result['start-time-select']);
+                var endTimestamp = dateToTimestamp(result['end-date'],result['end-time-select']);
+
+                //store data into device
+                rpc("energy.getUsageByDatetimeRange", 
+                    { 'parameters' : { 
+                        'meter_id' : meterId,
+                        'start_timestamp' : startTimestamp, 
+                        'end_timestamp' : endTimestamp } }, function (data) {
+
+                    const usageTotalList = document.querySelector('#usage-total-list');
+                    const usageList = document.querySelector('#usage-list');
+
+                    usageTotalList.innerHTML = "";
+                    usageList.innerHTML = "";
+
+                    if(data.usage_per_day && data.usage_per_day.length>0) {
+
+                        //calculate total
+                        var dayCount = data.usage_per_day.length-1;
+                        var usedKwhTotal = Math.round((data.usage_per_day[dayCount].end_kwh - data.usage_per_day[0].begin_kwh + Number.EPSILON) * 100) / 100;
+                        
+                        usageTotalList.appendChild(ons.createElement(`
+                            <ons-list>
+                                <ons-list-header>Total</ons-list-header>
+                                <ons-list-item>
+                                    <div class="left">
+                                        Usage: ${usedKwhTotal} Kwh
+                                    </div>
+                                </ons-list-item>
+                                <ons-list-item>
+                                    <div class="left">
+                                        Days: ${dayCount}
+                                    </div>
+                                </ons-list-item>
+                            </ons-list>
+                        `));
+
+
+                        usageList.appendChild(ons.createElement(`
+                                <ons-row>
+                                    <ons-col class="list-header">Day</ons-col>
+                                    <ons-col class="list-header">Usage (Kwh)</ons-col>
+                                    <ons-col class="list-header">Begin (Kwh)</ons-col>
+                                    <ons-col class="list-header">End (Kwh)</ons-col>
+                                </ons-row>
+                            `))
+
+                        data.usage_per_day.forEach(usage => {
+                            //calculate values
+                            var usageDate = new Intl.DateTimeFormat('nl-NL').format(new Date(Date.parse(usage.time)));
+                            var usedKwh = Math.round((usage.end_kwh - usage.begin_kwh + Number.EPSILON) * 100) / 100
+                        
+                            usageList.appendChild(ons.createElement(`
+                            <ons-list>
+                                <ons-list-item>
+                                <ons-row>
+                                    <ons-col>${usageDate}</ons-col>
+                                    <ons-col class="list-item">${usedKwh}</ons-col>
+                                    <ons-col class="list-item">${usage.begin_kwh}</ons-col>
+                                    <ons-col class="list-item">${usage.end_kwh}</ons-col>
+                                </ons-row>
+                                </ons-list-item>
+                            </ons-list>
+                            `));
+
+                        });
+
+                        buildChart("usage-chart", data.usage_per_day);
+                    }
+                });
+            };
+
+            var createBillDialog = function() { 
+                var dialog = document.getElementById('create-bill-dialog');
+                if (dialog) {
+                    dialog.show();
+                } 
+                else {
+                    ons.createElement('create-bill-dialog.html', { append: true })
+                    .then(function(dialog) {
+                        dialog.show();
+
+                        var list = document.querySelector('#create-bill-list');
+
+                        //Set default values
+                        fillMeterSelect();
+                        fillTimeSelect('start-time-select');
+                        fillTimeSelect('end-time-select');
+
+                        var currentDateStr = getCurrentDate();
+                        console.log(currentDateStr);
+                        result =  {
+                            'meter-select' : 1,
+                            'start-date' : currentDateStr,
+                            'start-time-select' : '12:00',
+                            'end-date' : currentDateStr,
+                            'end-time-select' : '12:00'
+                        };
+
+                        set_form_values(list, result);
+
+
+                    });
+
+                }
+
+            }
+
+            var applyCreateBill = function(id) {
+                document.getElementById(id).hide();
+                createBill();
+
+            };
+
+            var cancelDialog = function(id) {
+                document.getElementById(id).hide();
+            };
+
+
+    </script>
+
+
+   <ons-list>
+       <ons-progress-bar indeterminate class="global-progress"></ons-progress-bar>
+
+       <ons-list-header>Billing: <label id="showDate"></label></ons-list-header>
+
+        <div style="padding:5px;">
+            <ons-button onclick="createBillDialog()">Create bill </ons-button>
+        </div>
+   </ons-list>
+
+    <ons-progress-bar indeterminate class="global-progress"></ons-progress-bar>
+
+    <ons-list id="usage-total-list"></ons-list>
+    <ons-list id="usage-chart-list"></ons-list>
+    <ons-list id="usage-list"></ons-list>
+      
+
+    <template id="create-bill-dialog.html">
+        <ons-dialog id="create-bill-dialog">
+            <div style="text-align: center; padding: 10px;">
+                <ons-list id="create-bill-list">
+                    <ons-list-item>
+                        <div class="left">
+                            Meter:
+                        </div>
+                        <div class="right">
+                            <ons-select id="meter-select"></ons-select>
+                        </div>
+                    </ons-list-item>
+
+                    <ons-list-item>
+                        <div class="left">
+                            Start time:
+                        </div>
+            
+                        <div class="right">
+                            <ons-input
+                                id="start-date"
+                                type="date">
+                            </ons-input>
+
+                            <ons-select id="start-time-select"></ons-input>
+                        </div>
+                    </ons-list-item>
+            
+                    <ons-list-item>
+                        <div class="left">
+                            End time:
+                        </div>
+                        <div class="right">
+                            <ons-input
+                                id="end-date"
+                                type="date">
+                            </ons-input>
+                            <ons-select id="end-time-select"></ons-input>
+                    </div>
+                    </ons-list-item>
+
+                </ons-list>
+                <p>
+                    <ons-button onclick="cancelDialog('create-bill-dialog')">Cancel</ons-button>
+                    <ons-button onclick="applyCreateBill('create-bill-dialog')">Apply</ons-button>
+                </p>
+            </div>
+        </ons-dialog>
+    </template>
+
+</ons-page>

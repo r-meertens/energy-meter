@@ -1,0 +1,31 @@
+<ons-page id="home">
+
+    <script>
+
+        const openMenu = () => {
+            document.querySelector('#menu').open();
+        };
+   
+    </script>
+
+
+
+    <ons-toolbar id="home-toolbar">
+        <div class="center">Energy meter</div>
+
+        <div class="left">
+            <ons-toolbar-button onclick="openMenu()">
+                <ons-icon icon="md-menu"></ons-icon>
+            </ons-toolbar-button>
+        </div>
+      
+    </ons-toolbar>
+
+    <ons-tabbar id="tabbar">
+   <!--    <ons-tab page="login.html" label="Login"></ons-tab>-->
+        <ons-tab page="status.html" label="Status"></ons-tab>
+        <ons-tab page="overview.html" label="Overview"></ons-tab> 
+    </ons-tabbar>
+
+
+</ons-page>
