@@ -1,13 +1,5 @@
 <ons-page id="stats">
     <script>   
-        var setDateLabel = function(date) {
-            var text = "";
-            if (date) {
-                text = new Intl.DateTimeFormat('nl-NL', { dateStyle: 'full', timeStyle: 'long' }).format(new Date(Date.parse(date)));
-            }
-            document.getElementById('showDate').innerHTML = text;
-        }
-
         var loadStats = function(time) {
 
             if(time == undefined) {
@@ -22,19 +14,13 @@
 
                 const list = document.querySelector('#meter-list');
                 list.innerHTML = "";
-
-                //Set date
-                if (data.meters.length > 0) {
-                    setDateLabel(data.meters[0].time);
-                }
-                else {
-                    setDateLabel();
-                } 
    
                 if (data.meters) {
 
                     const list = document.querySelector('#meter-list');
                     data.meters.forEach(meter => {
+
+                        var measurementTime = text = new Intl.DateTimeFormat('nl-NL', { dateStyle: 'full', timeStyle: 'long' }).format(new Date(Date.parse(meter.time)));
                         list.appendChild(ons.createElement(`
                             <ons-list>
                                 <ons-list-header>Meter ${meter.id}</ons-list-header>
@@ -72,6 +58,15 @@
                                     </div>
                                     <div class="right">
                                         ${meter.frequency} Hz
+                                    </div>
+                                </ons-list-item>
+
+                                <ons-list-item>
+                                    <div class="left">
+                                        Last measurement
+                                    </div>
+                                    <div class="right">
+                                        ${measurementTime}
                                     </div>
                                 </ons-list-item>
                             </ons-list>       
@@ -187,8 +182,6 @@
      <ons-pull-hook id="pull-hook"></ons-pull-hook>
 
         <ons-progress-bar indeterminate class="global-progress"></ons-progress-bar>
-
-        <ons-list-header>Meting: <label id="showDate"></label></ons-list-header>
 
             <div style="padding:5px;">
                 <ons-button onclick="createBasicSearchDialog()">Basic selection</ons-button>
