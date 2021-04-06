@@ -2,6 +2,12 @@
 
 header("Access-Control-Allow-Origin: *");
 
+session_start();
+if(!isset($_SESSION["username"])) {
+   	header('HTTP/1.0 401 Unauthorized');
+	die();
+}
+
 error_reporting(E_ALL);
 require_once("../settings.php");
 require_once("../../vendor/autoload.php");

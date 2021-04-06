@@ -6,12 +6,11 @@
 <script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
 <script>
-
+    
     //////////////// GENERIC STUFF
     //document_root = 'http://192.168.1.126';
     //document_root = 'http://localhost/webapp';
     document_root = '';
-
     //global progress indication
     progress_count = 0;
     function progress_start() {
@@ -41,7 +40,6 @@
 
     //updates fields in data with values from form. 
     function get_form_values(context, data) {
-
         Object.keys(data).forEach(key => {
             var element = context.querySelector('#' + key);
             if (element) {
@@ -53,13 +51,20 @@
         });
     }
 
+    function logout() {
+        rpc("auth.logout", {}, function (data) {
+            document.querySelector('#menu').close();
+            const navigator = document.querySelector('#navigator');
+            navigator.resetToPage('login.html');
+          });
+    }
+
     ons.ready(function () {
         ons.disableDeviceBackButtonHandler();
         ons.setDefaultDeviceBackButtonListener(function () {
-
             document.querySelector('ons-navigator').popPage();
         });
-
+        
         progress_done();
     });
 
@@ -80,6 +85,11 @@
                     var result = JSON.parse(req.response);
                     load_handler(result);
                 }
+            }
+            else if (req.status == 401) {
+                console.error("rpc result 401", req);
+                const navigator = document.querySelector('#navigator');
+                loadPage('login.html');
             }
             else {
                 console.error("rpc result NON 200", req);
@@ -115,6 +125,9 @@
                     <ons-list>
                         <ons-list-item modifier="chevron tappable" onclick="loadPage('sysinfo.html')">
                             System info
+                        </ons-list-item>
+                        <ons-list-item modifier="chevron tappable" onclick="logout()">
+                            Logout
                         </ons-list-item>
                     </ons-list>
                 </ons-page>

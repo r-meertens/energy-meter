@@ -1,17 +1,25 @@
 <ons-page id="login">
     <script>
-      const login = () => {
-        const username = document.querySelector('#username').value;
-        const password = document.querySelector('#password').value;
-  
-        if (username === '' && password === '') {
-          // call the navigator to move to the new page
-          const navigator = document.querySelector('#navigator');
-          navigator.resetToPage('home.html');
-        } else {
-          ons.notification.alert('Wrong username/password combination');
-        }
-      };
+        function login() {
+          const username = document.querySelector('#username').value;
+          const password = document.querySelector('#password').value;
+    
+          if (username === '' && password === '') {
+            ons.notification.alert('Wrong username/password combination');
+          } 
+          else {
+            rpc("auth.login", { 'parameters' : { 'username' : username, 'password' : password } }, function (data) {
+              if(data.authentication == "success") {
+                const navigator = document.querySelector('#navigator');
+                navigator.resetToPage('home.html');
+              }
+              else {
+                ons.notification.alert('Wrong username/password combination');
+              }
+            });
+          }
+        };
+
     </script>
   
     <div style="text-align: center; margin-top: 200px">

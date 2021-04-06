@@ -3,11 +3,14 @@
 header("Access-Control-Allow-Origin: *");
 
 error_reporting(E_ALL);
-require_once("../settings.php");
 require_once("../../vendor/autoload.php");
+require_once("../settings.php");
 
-//Session check
-//..
+session_start();
+if(!isset($_SESSION["username"])) {
+   	header('HTTP/1.0 401 Unauthorized');
+	die();
+}
 
 //Input
 $function = $_GET['function'];
